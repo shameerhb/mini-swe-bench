@@ -1,0 +1,12 @@
+{
+  "task_id": "demo-001",
+  "repo": "demo-repository",
+  "base_commit": "HEAD",
+  "issue": "Verify that the evaluation runner can execute repository tests.",
+  "fail_to_pass": [
+    "python -c \"print('Fail-to-pass check executed')\""
+  ],
+  "pass_to_pass": [
+    "python -c \"print('Regression check executed')\""
+  ]
+}
