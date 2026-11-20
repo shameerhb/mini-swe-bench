@@ -58,3 +58,17 @@ def test_invalid_repository_path():
 
     with pytest.raises(NotADirectoryError):
         EvaluationRunner().evaluate(task, "missing-repository")
+
+def test_evaluation_does_not_modify_original_repository(tmp_path):
+    task = SimpleNamespace(
+        task_id="isolation-001",
+        fail_to_pass=[
+            f'"{sys.executable}" -c "from pathlib import Path; Path(\'agent_output.txt\').write_text(\'modified\')"'
+        ],
+        pass_to_pass=[],
+    )
+
+    result = EvaluationRunner().evaluate(task, tmp_path)
+
+    assert result["overall_status"] == "passed"
+    assert not (tmp_path / "agent_output.txt").exists()

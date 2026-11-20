@@ -1,4 +1,6 @@
-﻿import subprocess
+﻿import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +19,6 @@ class EvaluationRunner:
                 text=True,
                 timeout=self.timeout,
             )
-
             return {
                 "command": command,
                 "status": "passed" if result.returncode == 0 else "failed",
@@ -25,7 +26,6 @@ class EvaluationRunner:
                 "stdout": result.stdout,
                 "stderr": result.stderr,
             }
-
         except subprocess.TimeoutExpired as exc:
             return {
                 "command": command,
@@ -34,7 +34,6 @@ class EvaluationRunner:
                 "stdout": exc.stdout or "",
                 "stderr": exc.stderr or "",
             }
-
         except OSError as exc:
             return {
                 "command": command,
@@ -44,78 +43,93 @@ class EvaluationRunner:
                 "stderr": str(exc),
             }
 
-    def evaluate(
-        self,
-        task,
-        repo_path: str | Path,
-        patch_path: str | Path | None = None,
-    ) -> dict[str, Any]:
+    def evaluate(self, task, repo_path, patch_path=None) -> dict[str, Any]:
         repo_path = Path(repo_path).resolve()
 
         if not repo_path.is_dir():
-            raise NotADirectoryError(f"Repository directory not found: {repo_path}")
+            raise NotADirectoryError(
+                f"Repository directory not found: {repo_path}"
+            )
 
-        patch_result = None
-
+        patch_file = None
         if patch_path is not None:
-            patch_path = Path(patch_path).resolve()
+            patch_file = Path(patch_path).resolve()
+            if not patch_file.is_file():
+                raise FileNotFoundError(
+                    f"Patch file not found: {patch_file}"
+                )
 
-            if not patch_path.is_file():
-                raise FileNotFoundError(f"Patch file not found: {patch_path}")
+        with tempfile.TemporaryDirectory(prefix="mini-swe-bench-") as temp:
+            workspace = Path(temp) / "repository"
+            shutil.copytree(repo_path, workspace)
 
-            check = subprocess.run(
-                ["git", "apply", "--check", str(patch_path)],
-                cwd=repo_path,
-                capture_output=True,
-                text=True,
+            base_commit = getattr(task, "base_commit", None)
+
+            if base_commit and (workspace / ".git").exists():
+                checkout = subprocess.run(
+                    ["git", "checkout", "--detach", base_commit],
+                    cwd=workspace,
+                    capture_output=True,
+                    text=True,
+                )
+                if checkout.returncode != 0:
+                    raise RuntimeError(
+                        f"Could not checkout base commit: {checkout.stderr}"
+                    )
+
+            patch_status = None
+
+            if patch_file is not None:
+                check = subprocess.run(
+                    ["git", "apply", "--check", str(patch_file)],
+                    cwd=workspace,
+                    capture_output=True,
+                    text=True,
+                )
+                if check.returncode != 0:
+                    return {
+                        "task_id": task.task_id,
+                        "overall_status": "patch_rejected",
+                        "patch_error": check.stderr,
+                        "fail_to_pass": [],
+                        "pass_to_pass": [],
+                    }
+
+                applied = subprocess.run(
+                    ["git", "apply", str(patch_file)],
+                    cwd=workspace,
+                    capture_output=True,
+                    text=True,
+                )
+                if applied.returncode != 0:
+                    return {
+                        "task_id": task.task_id,
+                        "overall_status": "patch_error",
+                        "patch_error": applied.stderr,
+                        "fail_to_pass": [],
+                        "pass_to_pass": [],
+                    }
+
+                patch_status = "applied"
+
+            fail_to_pass = [
+                self.run_command(command, workspace)
+                for command in task.fail_to_pass
+            ]
+            pass_to_pass = [
+                self.run_command(command, workspace)
+                for command in task.pass_to_pass
+            ]
+
+            all_results = fail_to_pass + pass_to_pass
+            success = bool(all_results) and all(
+                result["status"] == "passed" for result in all_results
             )
 
-            if check.returncode != 0:
-                return {
-                    "task_id": task.task_id,
-                    "overall_status": "patch_rejected",
-                    "patch_error": check.stderr,
-                    "fail_to_pass": [],
-                    "pass_to_pass": [],
-                }
-
-            applied = subprocess.run(
-                ["git", "apply", str(patch_path)],
-                cwd=repo_path,
-                capture_output=True,
-                text=True,
-            )
-
-            if applied.returncode != 0:
-                return {
-                    "task_id": task.task_id,
-                    "overall_status": "patch_error",
-                    "patch_error": applied.stderr,
-                    "fail_to_pass": [],
-                    "pass_to_pass": [],
-                }
-
-            patch_result = "applied"
-
-        fail_to_pass = [
-            self.run_command(command, repo_path)
-            for command in task.fail_to_pass
-        ]
-
-        pass_to_pass = [
-            self.run_command(command, repo_path)
-            for command in task.pass_to_pass
-        ]
-
-        all_results = fail_to_pass + pass_to_pass
-        success = bool(all_results) and all(
-            result["status"] == "passed" for result in all_results
-        )
-
-        return {
-            "task_id": task.task_id,
-            "overall_status": "passed" if success else "failed",
-            "patch_status": patch_result,
-            "fail_to_pass": fail_to_pass,
-            "pass_to_pass": pass_to_pass,
-        }
+            return {
+                "task_id": task.task_id,
+                "overall_status": "passed" if success else "failed",
+                "patch_status": patch_status,
+                "fail_to_pass": fail_to_pass,
+                "pass_to_pass": pass_to_pass,
+            }
