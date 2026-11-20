@@ -3,7 +3,7 @@ import json
 
 from mini_swe_bench.task import EvaluationTask
 from mini_swe_bench.runner import EvaluationRunner
-from mini_swe_bench.report import generate_report
+from mini_swe_bench.report import generate_report, calculate_reward
 
 
 def main():
@@ -24,10 +24,12 @@ def main():
 
     json_path, markdown_path = generate_report(results, args.output)
 
-    print(json.dumps(results, indent=2))
+    reward = calculate_reward(results)
+    print(json.dumps({**results, "reward": reward}, indent=2))
     print(f"\nJSON report: {json_path}")
     print(f"Markdown report: {markdown_path}")
 
 
 if __name__ == "__main__":
     main()
+
