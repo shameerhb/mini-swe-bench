@@ -17,5 +17,14 @@ def test_generate_json_and_markdown_reports(tmp_path):
 
     assert json_path.exists()
     assert markdown_path.exists()
-    assert json.loads(json_path.read_text(encoding="utf-8"))["overall_status"] == "passed"
-    assert "Evaluation Report: example-001" in markdown_path.read_text(encoding="utf-8")
+
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    markdown = markdown_path.read_text(encoding="utf-8")
+
+    assert report["overall_status"] == "passed"
+    assert report["reward"]["reward"] == 100.0
+    assert report["reward"]["fix_rate"] == 1.0
+    assert report["reward"]["regression_rate"] == 1.0
+    assert "Evaluation Report: example-001" in markdown
+    assert "Reward:** 100.0/100" in markdown
+
