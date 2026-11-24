@@ -1,0 +1,12 @@
+{
+  "task_id": "discount-001",
+  "repo": "examples/discount-bug",
+  "base_commit": "fixture-v1",
+  "issue": "The apply_discount function accepts negative prices and negative discount percentages. Reject negative prices and discounts while preserving valid discount calculations.",
+  "fail_to_pass": [
+    "python -m pytest tests/test_validation.py -q"
+  ],
+  "pass_to_pass": [
+    "python -m pytest tests/test_pricing.py -q"
+  ]
+}

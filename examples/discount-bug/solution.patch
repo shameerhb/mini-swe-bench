@@ -1,0 +1,13 @@
+diff --git a/src/pricing.py b/src/pricing.py
+--- a/src/pricing.py
++++ b/src/pricing.py
+@@ -1,5 +1,9 @@
+ def apply_discount(price: float, discount: float) -> float:
+-    if discount > 100:
+-        raise ValueError("Discount cannot exceed 100")
++    if price < 0:
++        raise ValueError("Price cannot be negative")
++    if not 0 <= discount <= 100:
++        raise ValueError("Discount must be between 0 and 100")
+
+     return price - (price * discount / 100)

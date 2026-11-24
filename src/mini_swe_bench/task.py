@@ -43,7 +43,7 @@ class EvaluationTask:
     def load(cls, path: str | Path) -> "EvaluationTask":
         task_path = Path(path)
 
-        with task_path.open("r", encoding="utf-8") as file:
+        with task_path.open("r", encoding="utf-8-sig") as file:
             data = json.load(file)
 
         if not isinstance(data, dict):
@@ -60,3 +60,4 @@ class EvaluationTask:
             "fail_to_pass": self.fail_to_pass,
             "pass_to_pass": self.pass_to_pass,
         }
+
