@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 import json
 
@@ -60,4 +60,5 @@ class EvaluationTask:
             "fail_to_pass": self.fail_to_pass,
             "pass_to_pass": self.pass_to_pass,
         }
+
 

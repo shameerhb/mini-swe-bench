@@ -1,0 +1,10 @@
+diff --git a/src/username.py b/src/username.py
+--- a/src/username.py
++++ b/src/username.py
+@@ -1,2 +1,5 @@
+ def normalize_username(username: str) -> str:
+-    return username.strip().lower()
++    normalized = username.strip().lower()
++    if not normalized:
++        raise ValueError("Username cannot be empty")
++    return normalized

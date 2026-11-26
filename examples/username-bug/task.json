@@ -1,0 +1,12 @@
+{
+  "task_id": "username-001",
+  "repo": "examples/username-bug",
+  "base_commit": "fixture-v1",
+  "issue": "The normalize_username function accepts empty and whitespace-only usernames. Reject these inputs with ValueError while preserving normal username normalization.",
+  "fail_to_pass": [
+    "python -m pytest tests/test_validation.py -q"
+  ],
+  "pass_to_pass": [
+    "python -m pytest tests/test_username.py -q"
+  ]
+}

@@ -1,0 +1,12 @@
+﻿services:
+  benchmark-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    image: mini-swe-bench-runner:latest
+    network_mode: none
+    mem_limit: 512m
+    cpus: 1.0
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
